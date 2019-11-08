@@ -1,0 +1,42 @@
+<input> 100001 2
+
+read 1
+read 2
+
+load 2
+jz error
+load 1
+jz zero
+jmp start
+
+zero:
+write =0
+write =0
+
+error:
+halt
+
+start:
+load =0
+store 3 ; R3 will store integer part of quotient
+
+div:
+load 1
+jz end
+sub 2
+jgtz lab1
+jz lab1
+jmp end
+
+lab1:
+store 1
+load 3
+add =1
+store 3
+jmp div
+
+end:
+write 3
+write 1
+
+halt

@@ -1,0 +1,36 @@
+<input> 1000 1000
+
+read 1
+read 2
+
+load 1
+sub 2
+jgtz start
+
+;exchange
+load 2
+store 3
+load 1
+store 2
+load 3
+store 1
+
+start:
+load =0
+store 3 ; R3 will store sum
+load 2
+
+mlt:
+jz end
+load 3
+add 1
+store 3
+load 2
+sub =1
+store 2
+jmp mlt
+
+end:
+write 3
+
+halt

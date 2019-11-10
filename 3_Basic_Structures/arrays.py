@@ -161,21 +161,37 @@ class MatrixArray:
         return 0
 
     def insert(self, item, index):
+        if ((index // self.vector) == ((self.arr_size-1) // self.vector)):
+            self.arr.get(index // self.vector).insert(item, index % self.vector)
+            return 0
+
+        e1 = self.arr.get(index // self.vector).remove(self.arr.get(index // self.vector).size() - 1)
+        self.arr.get(index // self.vector).insert(item, index % self.vector)
+        
+        for i in range(index // self.vector + 1, self.arr_size // self.vector):
+            #print self.arr.get(i).arr
+            e2 = self.arr.get(i).remove(self.arr.get(i).size())
+            self.arr.get(i).insert(e1, 0)
+            e1 = self.arr.get(i).get(self.arr.get(i).size())
+            #self.arr.get(i).insert(e2, self.arr.get(i).size())
+            #print self.arr.get(i).arr
+        
         if self.arr_size == self.arr.size() * self.vector:
             self.arr.add(VectorArray(self.vector))
 
-        self.arr.get(index // self.vector).insert(item, index % self.vector)
         self.arr_size = self.arr_size + 1
         return 0
     
     def remove(self, index):
         e = self.arr.get(index // self.vector).remove(index % self.vector)
-        
+        if ((index // self.vector) == ((self.arr_size-1) // self.vector)):
+            return e
+       
         self.arr.get(index // self.vector).add(self.arr.get(index // self.vector + 1).get(0))
 
-        for i in range(index // self.vector + 1, self.arr_size // self.vector):
+        for i in range(index // self.vector + 1, self.arr_size // self.vector - 1):
             self.arr.get(i).remove(0)
-            self.arr.get(i).add(self.arr.get(i).get(0))
+            self.arr.get(i).add(self.arr.get(i + 1).get(0))
 
         self.arr_size = self.arr_size - 1 
         return e
@@ -187,19 +203,41 @@ def test_array(a, total):
     start_time = time.time()
     for i in range(0, total):
         a.add(i)
-        
     end_time = time.time() - start_time
+
+    a.remove(997)
+    a.insert(1111, 997)
 
     print "%s: %d at %.2fs" % (a.__class__.__name__, total,  end_time)
 
 sa = SingleArray()
-test_array(sa, 10000)
+#test_array(sa, 10000)
 va = VectorArray(100)
-test_array(va, 100000)
+#test_array(va, 100000)
 fa = FactorArray(50, 100)
-test_array(fa, 100000)
+#test_array(fa, 100000)
 ma = MatrixArray(100)
-test_array(ma, 100000)
+test_array(ma, 10000)
+
+for i in range(0, ma.size()):
+    print ma.get(i)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+exit(0)
 
 
 start_time = time.time()

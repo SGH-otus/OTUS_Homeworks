@@ -205,40 +205,22 @@ def test_array(a, total):
         a.add(i)
     end_time = time.time() - start_time
 
-    a.remove(997)
-    a.insert(1111, 997)
+    #a.remove(997)
+    #a.insert(1111, 997)
 
     print "%s: %d at %.2fs" % (a.__class__.__name__, total,  end_time)
 
 sa = SingleArray()
-#test_array(sa, 10000)
+test_array(sa, 10000)
 va = VectorArray(100)
-#test_array(va, 100000)
+test_array(va, 100000)
 fa = FactorArray(50, 100)
-#test_array(fa, 100000)
+test_array(fa, 100000)
 ma = MatrixArray(100)
 test_array(ma, 10000)
 
-for i in range(0, ma.size()):
-    print ma.get(i)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-exit(0)
-
+#for i in range(0, ma.size()):
+#    print ma.get(i)
 
 start_time = time.time()
 a = []
@@ -246,4 +228,4 @@ for i in range(100000):
     a.append(i)
 
 end_time = time.time() - start_time
-print "%.2fs" % (end_time)
+print "list:        100000 %.2fs" % (end_time)

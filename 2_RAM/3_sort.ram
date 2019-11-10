@@ -1,0 +1,101 @@
+<input> 7 7 6 5 4 3 2 1
+
+; 5 4 3 0 2 1
+; 8 0 1 2 3 4 5 6 7
+; 8 7 6 5 4 3 2 1 0
+; 0
+; 1 8
+; 7 7 7 7 7 7 7 7
+
+load =10
+store 1 ; start of the array
+
+read 0
+store 2 ; size of array
+jz zero
+sub =1
+jz one
+
+load 1
+store 3 ; iterator
+store 4 ; address of current element
+
+l_read:
+    read *4
+    
+    load 4
+    add =1
+    store 4
+    
+    load 3
+    sub =1
+    store 3
+jgtz l_read
+
+load 1
+add 2 
+sub =1
+store 3 ; address of current element in outer cycle
+store 4 ; address of current element in inner cycle
+
+l_out:
+    load 3
+    sub =1
+    store 4
+
+    l_in:
+        load *3
+        sub *4
+        jgtz continue
+        jz continue
+
+        load *3
+        store 5; temp reg
+        load *4
+        store *3
+        load 5
+        store *4
+
+        continue:
+        load 4
+        sub =1
+        store 4
+        add =1
+        sub 1
+        jgtz l_in
+
+    load 3
+    sub =1
+    store 3
+    sub 1
+    jgtz l_out
+
+load 2
+store 3 ; iterator
+load 1
+store 4 ;  address of current element
+
+l_write:
+    write *4
+    
+    load 4
+    add =1
+    store 4
+    
+    load 3
+    sub =1
+    store 3
+jgtz l_write
+jmp end
+
+zero:
+write 0
+jmp end
+
+one:
+read 3
+write 3
+jmp end
+
+end:
+halt

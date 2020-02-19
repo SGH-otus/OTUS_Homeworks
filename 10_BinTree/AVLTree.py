@@ -49,14 +49,12 @@ class AVL_Tree:
             if root.left is not None:
                 self.AddNode(root.left, node)
             else:
-                print "added %d left to %d" % (node.val, root.val)
                 root.left = node
                 node.parent = root
         elif node.val > root.val:
             if root.right is not None:
                 self.AddNode(root.right, node)
             else:
-                print "added %d right to %d" % (node.val, root.val)
                 root.right = node
                 node.parent = root
         root = self.Rebalance(root)
@@ -66,7 +64,6 @@ class AVL_Tree:
         l = Leaf(val)
         if self.tree_root is None:
             self.tree_root = l
-            print "added %d as root" % (val)
         else:
             self.AddNode(self.tree_root, l)
         return l
@@ -318,10 +315,12 @@ print "Working with random numbers"
 t = AVL_Tree(None, False)
 l = []
 
-size = 50 # size of tree
+#sys.setrecursionlimit(10000) # program crashes with small numbers of this parameter
+
+size = 100000 # size of tree
 minrand = -10000 # minimum integer to generate as tree member
 maxrand =  10000 # maximum integer to generate as tree member
-findsize = size // 1
+findsize = size // 10
 
 start_time = time.time()
 for i in xrange(size):
@@ -330,8 +329,6 @@ for i in xrange(size):
     t.AddVal(r)
 end_time = time.time() - start_time
 print "Added %d elements to the tree: %0.5f" % (size, end_time)
-
-print t.tree_root.height
 
 start_time = time.time()
 for i in xrange(findsize):
@@ -343,22 +340,10 @@ print "Searched %d random elements in: %0.5f" % (findsize, end_time)
 start_time = time.time()
 for i in xrange(findsize):
     r = random.randint(0, len(l)-1)
-    print i, t.tree_root.val, t.tree_root.height, "deleting", l[r]
     t.DelVal(t.tree_root, l[r])
     del l[r]
-    t.PrintTree(t.tree_root)
-    print
 end_time = time.time() - start_time
 print "Deleted %d random elements in: %0.5f" % (findsize, end_time)
-
-print
-print
-print
-t.PrintTree(t.tree_root)
-print t.tree_root.height
-print t.tree_root.val
-
-exit(0)
 
 start_time = time.time()
 for i in xrange(size):
@@ -368,49 +353,6 @@ for i in xrange(size):
 end_time = time.time() - start_time
 print "Added %d elements to the tree: %0.5f" % (size, end_time)
 
-print t.tree_root.height
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 t = None
 l = []
 gc.collect() # just curious how it works =)
@@ -418,8 +360,8 @@ gc.collect() # just curious how it works =)
 print
 #sys.setrecursionlimit(10000) # program crashes with small numbers of this parameter
 print "Working with increasing numbers, recursion limit:", sys.getrecursionlimit()
-#size = 100000
-#findsize = size // 10
+size = 100000
+findsize = size // 20
 
 t = AVL_Tree(None, False)
 l = []
@@ -432,16 +374,9 @@ for i in xrange(size):
 end_time = time.time() - start_time
 print "Added %d elements to the tree: %0.5f" % (size, end_time)
 
-#t.PrintTree(t.tree_root)
-print t.tree_root.height
-
 start_time = time.time()
 for i in xrange(findsize):
     r = random.randint(0, len(l)-1)
     t.FindVal(t.tree_root, r)
 end_time = time.time() - start_time
 print "Searched %d random elements in: %0.5f" % (findsize, end_time)
-
-#t.PrintTree(t.tree_root)
-print t.tree_root.height
-

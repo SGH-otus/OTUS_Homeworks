@@ -64,6 +64,7 @@ class Leaf:
 
 class Huffman:
     description = "Huffman compression algo"
+    abbr = "H"
     
     def __init__(self):
         return None 

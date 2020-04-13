@@ -3,6 +3,7 @@ import struct
 
 class RLE:
     description = "RLE compression algo"
+    abbr = "R"
     
     def __init__(self):
         return None 

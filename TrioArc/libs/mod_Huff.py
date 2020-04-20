@@ -109,7 +109,7 @@ class Huffman:
         
         outdata = struct.pack("<H", s.len)
         outdata = outdata + s.tobytes()
-        outdata = outdata + struct.pack("<B", o.len % 8)
+        outdata = outdata + struct.pack("<I", o.len)
         outdata = outdata + o.tobytes()
         return (len(outdata), outdata)    
 
@@ -126,10 +126,12 @@ class Huffman:
         tree_bs = bitstring.BitArray(bytes = tree_data)[:tree_pad - 8]
 
         inpdata = inpdata[tree_len:]
-        data_pad = struct.unpack("<B", inpdata[0])[0]
+        data_len = struct.unpack("<I", inpdata[0:4])[0]
 
-        inpdata = inpdata[1:]
-        data_bs = bitstring.BitArray(bytes = inpdata)[:data_pad - 8]
+        inpdata = inpdata[4:]
+        data_bs = bitstring.BitArray(bytes = inpdata)
+        #print data_bs.len, data_len
+        data_bs = data_bs[:data_len]
 
         dict2 = {}
         root = Leaf(None)

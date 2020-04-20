@@ -13,8 +13,9 @@ class RLE:
         cntr = 0
         tmpstr = ""
         next_c = ""
+        c = ""
         i = 0
-        
+    
         while i < len(inpdata) - 1:
             c = inpdata[i]
             next_c = inpdata[i + 1]
@@ -49,7 +50,7 @@ class RLE:
         if tmpstr != "":
             outdata = outdata + struct.pack("<b", cntr - 1) + tmpstr + next_c
         else:
-            outdata = outdata + struct.pack("<b", cntr + 1) + c
+            outdata = outdata + struct.pack("<b", cntr) + c
             
         return (len(outdata), outdata)
 

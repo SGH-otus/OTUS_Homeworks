@@ -82,7 +82,7 @@ def read_arc(start, algo, tree, mode, mode_params):
 
                 if mode == MODE_ONE_OBJ:
                     if newdir_name == mode_params[1]:
-                        print "DIR"
+                        #print "DIR"
                         if not os.path.exists(newdir_name):
                             os.mkdir(newdir_name)
                         read_arc(start, algo, tree, MODE_DECOMPRESS, [".\\" + fname])
@@ -130,6 +130,7 @@ group1 = parser.add_argument_group(title="Actions group", description="One of th
 group2 = group1.add_mutually_exclusive_group(required = True)
 group2.add_argument("-c", "--compress", help = "Compress file", action = "store_true")
 group2.add_argument("-d", "--decompress", help = "Decompress file", action = "store_true")
+group2.add_argument("-d1", "--decompress_one", help = "Extract one object", action = "store_true")
 group2.add_argument("-l1", "--list1", help = "List archive contents, tree", action = "store_true")
 group2.add_argument("-l2", "--list2", help = "List archive contents, full paths", action = "store_true")
 group2.add_argument("-b", "--benchmark", help = "Benchmark available compressing algorithms on choosen data", action = "store_true")
@@ -137,6 +138,7 @@ group2.add_argument("-a", "--algos", help = "List available compressing algorith
 group1.add_argument("-algo", required = False, metavar = "A", help = "Algorithm to compress with (Default - RLE)")
 group1.add_argument("-inp", required = False, metavar = "path", help = "Input path")
 group1.add_argument("-out", required = False, metavar = "path", help = "Output path (Default - \"archive.trar\" / <current_dir>)")
+group1.add_argument("-objname", required = False, metavar = "name", help = "Object name (only with -d1)")
 
 if len(sys.argv) == 1:
     parser.print_help(sys.stderr)
@@ -230,7 +232,7 @@ elif args.benchmark:
             (data, size) = file_pack(args.inp, a)
 
         end_time = time.time() - start_time
-        print "COMPRESSION DONE in %0.2f s. Ratio %0.2f (%d / %d bytes)" % (end_time, (1.0 * len(data)) / size, len(data), size)
+        print "%0.2f s. Ratio %0.2f (%d / %d bytes)" % (end_time, (1.0 * len(data)) / size, len(data), size)
     
 elif args.list1:
     if not args.inp:
@@ -274,5 +276,26 @@ elif args.list2:
     inpdata = inpdata[5:]
     read_arc(0, cur_algo, inpdata, MODE_LIST2, [""])
 
-  
-#read_arc(0, cur_algo, inpdata, MODE_ONE_OBJ, ["", "10_BinTree\\"])
+elif args.decompress_one:
+    if not args.inp:
+        parser.error('Input path required for this action!')
+
+    if not args.objname:
+        parser.error('Object name required for this action!')
+
+    with open(args.inp, "rb") as f: inpdata = f.read(); f.close();
+    if inpdata[:4] != signature:
+        print "ERROR: WRONG SIGNATURE"
+        exit(-1)
+
+    cur_algo = None
+    for a in modules:
+        if a.abbr == inpdata[4]:
+            cur_algo = a
+
+    if cur_algo == None:
+        print "ERROR: WRONG ALGO"
+        exit(-1)
+
+    inpdata = inpdata[5:]
+    read_arc(0, cur_algo, inpdata, MODE_ONE_OBJ, ["", args.objname])

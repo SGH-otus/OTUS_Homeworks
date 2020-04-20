@@ -4,6 +4,14 @@ import sys
 import os
 import struct
 import shutil
+import time
+
+MODE_DECOMPRESS = "D"
+MODE_LIST1 = "L1"
+MODE_LIST2 = "L2"
+MODE_ONE_OBJ = "O"
+
+signature = "TRAR"
 
 modules = []
 
@@ -13,58 +21,51 @@ modules.append(MR.RLE())
 from libs import mod_Huff as MH
 modules.append(MH.Huffman())
 
-'''
-parser = argparse.ArgumentParser(description="RLE compress/decompress")
+from libs import mod_LZW as ML
+modules.append(ML.LZW())
+
+# TODOs:
+# - CRCs
+# - CRYPTO
+# - verbose?
+# - rmtree?
+
+def file_pack(fpath, algo):
+    #print fpath
+    fname = fpath.split('\\')[-1]
+    f = open(fpath, "rb")
+    fdata = f.read()
+    len(fdata)
+    f.close()
    
-group1 = parser.add_argument_group(title="Actions group", description="One of these options must be chosen.")
-group2 = group1.add_mutually_exclusive_group(required=True)
-group2.add_argument("-c", "--compress", help="Compress file", action="store_true")
-group2.add_argument("-d", "--decompress", help="Decompress file", action="store_true")
-group2.add_argument("-l", "--list", help="List archive contents", action="store_true")
-group2.add_argument("-a", "--algos", help="List all available compressing algos", action="store_true")
-parser.add_argument("file", help="Filename to work with")
-if len(sys.argv) == 1:
-    parser.print_help(sys.stderr)
-    sys.exit(1)
-args = parser.parse_args()
+    s = ""
+    (fsize, c_data) = algo.compress(fdata)
+    s = s + struct.pack("<H", len(fname)) 
+    s = s + struct.pack("<I", fsize) 
+    s = s + fname
+    s = s + c_data
+    return (s, len(fdata))
 
-
-if args.compress:
-    print "COMPRESS"
-    print args.file
-
-'''
-
-# COMPRESS ONLY 1 FILE
-# LZW
-# EXTRACT ONLY ONE ITEM
-# COUNT SIZE OF FOLDER BEFORE COMPRESSION
-# MAKE RLE+HUFF, RLE + LZW MODES
-# CRCs
-
-def make_arc(walk_path, algo):
-    s = b""
-    lst = os.listdir(walk_path)
+def dir_pack(arc_path, algo):
+    data = b""
+    sz = 0
+    lst = os.listdir(arc_path)
     for fname in lst[:]:
-        path = os.path.join(walk_path, fname)
+        path = os.path.join(arc_path, fname)
         if os.path.isdir(path):
-            s = s + struct.pack("<H", (0x8000 | len(fname))) + fname
-            s = s + make_arc(path, algo)
+            data = data + struct.pack("<H", (0x8000 | len(fname))) + fname
+            (t_s, t_sz) = dir_pack(path, algo)
+            data = data + t_s
+            sz = sz + t_sz
             lst.remove(fname)
             
     for fname in lst:
-        f = open(os.path.join(walk_path, fname), "rb")
-        fdata = f.read()
-        f.close()
+        (p1, p2) = file_pack(os.path.join(arc_path, fname), algo)
+        data = data + p1
+        sz = sz + p2
+    return (data + struct.pack("<H", 0), sz)
        
-        (fsize, c_data) = algo.compress(fdata)
-        s = s + struct.pack("<H", len(fname)) 
-        s = s + struct.pack("<I", fsize) 
-        s = s + fname
-        s = s + c_data
-    return s + struct.pack("<H", 0)
-       
-def read_arc(start, tree, out_path, algo):
+def read_arc(start, algo, tree, mode, mode_params):
     while True:
         c = tree[start + 0 : start + 2]
         c = struct.unpack("<H", c)[0]
@@ -75,40 +76,203 @@ def read_arc(start, tree, out_path, algo):
         else:
             if (c & 0x8000):
                 namelen = c & 0x7FFF
-                fname = tree[start : start + namelen]
+                fname = tree[start : start + namelen] + "\\"
                 start = start + namelen
-                newdir_name = out_path + fname + "\\"
-                os.mkdir(newdir_name)
-                start = read_arc(start, tree, newdir_name, algo)
+                newdir_name = mode_params[0] + fname
+
+                if mode == MODE_ONE_OBJ:
+                    if newdir_name == mode_params[1]:
+                        print "DIR"
+                        if not os.path.exists(newdir_name):
+                            os.mkdir(newdir_name)
+                        read_arc(start, algo, tree, MODE_DECOMPRESS, [".\\" + fname])
+                    else:
+                        start = read_arc(start, algo, tree, mode, [newdir_name, mode_params[1]])
+                if mode == MODE_LIST1:
+                    print newdir_name
+                    start = read_arc(start, algo, tree, mode, [mode_params[0] + "   "])
+                if mode == MODE_LIST2:
+                    start = read_arc(start, algo, tree, mode, [newdir_name])
+                if mode == MODE_DECOMPRESS:
+                    if not os.path.exists(newdir_name):
+                        os.mkdir(newdir_name)
+                    start = read_arc(start, algo, tree, mode, [newdir_name])
+
             else:
                 namelen = c & 0x7FFF
                 fsize = tree[start : start + 4]
                 fsize = struct.unpack("<I", fsize)[0]
                 fname = tree[start + 4  : start + 4 + namelen]
                 fdata = tree[start + 4 + namelen : start + 4 + namelen + fsize]
-                (d_fsize, d_data) = algo.decompress(fdata)
-                with open(out_path + fname, "wb") as f: f.write(d_data); f.close();
+
+                fname_full = mode_params[0] + fname
+
+                if mode == MODE_ONE_OBJ:
+                    if fname_full == mode_params[1]:
+                        #print "FILE"
+                        (d_fsize, d_data) = algo.decompress(fdata)
+                        with open(".\\" + fname, "wb") as f: f.write(d_data); f.close();
+                if mode == MODE_LIST1:
+                   print fname_full
+                if mode == MODE_LIST2:
+                   print fname_full
+                if mode == MODE_DECOMPRESS:    
+                    #print fname_full
+                    (d_fsize, d_data) = algo.decompress(fdata)
+                    with open(fname_full, "wb") as f: f.write(d_data); f.close();
+
                 start = start + 4 + namelen + fsize
+    return None            
 
-cur_mod = modules[1]
-
-walk_path = "C:\\Work\\TrioArc\\test"
-tree = make_arc(walk_path, cur_mod)
-
-with open("arc", "wb") as f: f.write(tree); f.close();
-
-print "COMPRESSION DONE"
-
-out_path = "C:\\Work\\TrioArc\\test2"
-
-if out_path[:-1] != "\\":
-    out_path = out_path + "\\"
-
-if os.path.exists(out_path):
-    shutil.rmtree(out_path)
-os.mkdir(out_path)
+parser = argparse.ArgumentParser(description = "TrioArc archiver", add_help = False)
    
-read_arc(0, tree, out_path, cur_mod)
+group1 = parser.add_argument_group(title="Actions group", description="One of these options must be chosen.")
+group2 = group1.add_mutually_exclusive_group(required = True)
+group2.add_argument("-c", "--compress", help = "Compress file", action = "store_true")
+group2.add_argument("-d", "--decompress", help = "Decompress file", action = "store_true")
+group2.add_argument("-l1", "--list1", help = "List archive contents, tree", action = "store_true")
+group2.add_argument("-l2", "--list2", help = "List archive contents, full paths", action = "store_true")
+group2.add_argument("-b", "--benchmark", help = "Benchmark available compressing algorithms on choosen data", action = "store_true")
+group2.add_argument("-a", "--algos", help = "List available compressing algorithms", action = "store_true")
+group1.add_argument("-algo", required = False, metavar = "A", help = "Algorithm to compress with (Default - RLE)")
+group1.add_argument("-inp", required = False, metavar = "path", help = "Input path")
+group1.add_argument("-out", required = False, metavar = "path", help = "Output path (Default - \"archive.trar\" / <current_dir>)")
+
+if len(sys.argv) == 1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
+args = parser.parse_args()
+
+if args.algos:
+    print "Shortcut : Description"
+    for a in modules:
+        print a.abbr, "       :", a.description
+    
+elif args.compress:
+    cur_algo = None
+    if args.algo:
+        for m in modules:
+            if m.abbr == args.algo:
+                cur_algo = m
+
+        if cur_algo == None:
+            parser.error('Unknown algorithm!')
+    else:
+        parser.error('Algorithm type required to comperss data!')
+
+    if not args.inp:
+        parser.error('Input path required for this action!')
+    
+    fnm = "archive.trar"
+    if args.out:
+        fnm = args.out
 
 
+    start_time = time.time()
 
+    if os.path.isdir(args.inp):
+        (data, size) = dir_pack(args.inp, cur_algo)
+    else: 
+        (data, size) = file_pack(args.inp, cur_algo)
+        data = data + struct.pack("<H", 0)
+
+    end_time = time.time() - start_time
+    print "COMPRESSION DONE in %0.2f s. Ratio %0.2f (%d / %d bytes)" % (end_time, (1.0 * len(data)) / size, len(data), size)
+
+    data = signature + cur_algo.abbr + data
+    with open(fnm, "wb") as f: f.write(data); f.close();
+    print "Output file:", fnm
+    
+elif args.decompress:
+    if not args.inp:
+        parser.error('Input path required for this action!')
+
+    with open(args.inp, "rb") as f: inpdata = f.read(); f.close();
+    if inpdata[:4] != signature:
+        print "ERROR: WRONG SIGNATURE"
+        exit(-1)
+
+    cur_algo = None
+    for a in modules:
+        if a.abbr == inpdata[4]:
+            cur_algo = a
+
+    if cur_algo == None:
+        print "ERROR: WRONG ALGO"
+        exit(-1)
+
+    inpdata = inpdata[5:]
+
+    out_path = ".\\"
+    if args.out:
+        out_path = args.out
+
+    if out_path[:-1] != "\\":
+        out_path = out_path + "\\"
+
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
+       
+    read_arc(0, cur_algo, inpdata, MODE_DECOMPRESS, [out_path])
+
+elif args.benchmark:
+    if not args.inp:
+        parser.error('Input path required for this action!')
+
+    for a in modules:
+        print a.description, ":", 
+
+        start_time = time.time()
+
+        if os.path.isdir(args.inp):
+            (data, size) = dir_pack(args.inp, a)
+        else: 
+            (data, size) = file_pack(args.inp, a)
+
+        end_time = time.time() - start_time
+        print "COMPRESSION DONE in %0.2f s. Ratio %0.2f (%d / %d bytes)" % (end_time, (1.0 * len(data)) / size, len(data), size)
+    
+elif args.list1:
+    if not args.inp:
+        parser.error('Input path required for this action!')
+
+    with open(args.inp, "rb") as f: inpdata = f.read(); f.close();
+    if inpdata[:4] != signature:
+        print "ERROR: WRONG SIGNATURE"
+        exit(-1)
+
+    cur_algo = None
+    for a in modules:
+        if a.abbr == inpdata[4]:
+            cur_algo = a
+
+    if cur_algo == None:
+        print "ERROR: WRONG ALGO"
+        exit(-1)
+
+    inpdata = inpdata[5:]
+    read_arc(0, cur_algo, inpdata, MODE_LIST1, [""])
+
+elif args.list2:
+    if not args.inp:
+        parser.error('Input path required for this action!')
+
+    with open(args.inp, "rb") as f: inpdata = f.read(); f.close();
+    if inpdata[:4] != signature:
+        print "ERROR: WRONG SIGNATURE"
+        exit(-1)
+
+    cur_algo = None
+    for a in modules:
+        if a.abbr == inpdata[4]:
+            cur_algo = a
+
+    if cur_algo == None:
+        print "ERROR: WRONG ALGO"
+        exit(-1)
+
+    inpdata = inpdata[5:]
+    read_arc(0, cur_algo, inpdata, MODE_LIST2, [""])
+
+  
+#read_arc(0, cur_algo, inpdata, MODE_ONE_OBJ, ["", "10_BinTree\\"])

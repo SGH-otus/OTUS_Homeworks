@@ -13,54 +13,42 @@ class LZW:
         dictionary_size = 256                   
         dictionary = {chr(i): i for i in range(dictionary_size)}    
         string = ""
-        compressed_data = []
+        outdata = ""
 
         for symbol in inpdata:
             string_plus_symbol = string + symbol
             if string_plus_symbol in dictionary: 
                 string = string_plus_symbol
             else:
-                compressed_data.append(dictionary[string])
+                outdata = outdata + pack('>H', dictionary[string])
                 if(len(dictionary) <= self.maximum_table_size):
                     dictionary[string_plus_symbol] = dictionary_size
                     dictionary_size += 1
                 string = symbol
 
         if string in dictionary:
-            compressed_data.append(dictionary[string])
+            outdata = outdata + pack('>H', dictionary[string])
 
-        outdata = ""
-        for data in compressed_data:
-            outdata = outdata + pack('>H',int(data))
-            
         return (len(outdata), outdata)    
 
     def decompress(self, inpdata):
-        compressed_data = []
+        dictionary_size = 256
+        dictionary = dict([(x, chr(x)) for x in range(dictionary_size)])
         next_code = 256
-        decompressed_data = ""
         string = ""
+        outdata = ""
 
         c = 0
         while c < len(inpdata):
-            data = inpdata[c : c + 2]
-            compressed_data.append(unpack('>H', data)[0])
-            c = c + 2
-
-        dictionary_size = 256
-        dictionary = dict([(x, chr(x)) for x in range(dictionary_size)])
-
-        for code in compressed_data:
+            code = unpack('>H', inpdata[c : c + 2])[0]
             if not (code in dictionary):
-                dictionary[code] = string + (string[0])
-            decompressed_data += dictionary[code]
+                dictionary[code] = string + string[0]
+            #decompressed_data += dictionary[code]
+            outdata = outdata + dictionary[code]
             if not(len(string) == 0):
-                dictionary[next_code] = string + (dictionary[code][0])
+                dictionary[next_code] = string + dictionary[code][0]
                 next_code += 1
             string = dictionary[code]
-
-        outdata = ""
-        for data in decompressed_data:
-            outdata = outdata + data
+            c = c + 2
 
         return (len(outdata), outdata)  

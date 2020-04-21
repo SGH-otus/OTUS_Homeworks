@@ -82,7 +82,6 @@ def read_arc(start, algo, tree, mode, mode_params):
 
                 if mode == MODE_ONE_OBJ:
                     if newdir_name == mode_params[1]:
-                        #print "DIR"
                         if not os.path.exists(newdir_name):
                             os.mkdir(newdir_name)
                         read_arc(start, algo, tree, MODE_DECOMPRESS, [".\\" + fname])
@@ -109,7 +108,6 @@ def read_arc(start, algo, tree, mode, mode_params):
 
                 if mode == MODE_ONE_OBJ:
                     if fname_full == mode_params[1]:
-                        #print "FILE"
                         (d_fsize, d_data) = algo.decompress(fdata)
                         with open(".\\" + fname, "wb") as f: f.write(d_data); f.close();
                 if mode == MODE_LIST1:
@@ -169,7 +167,6 @@ elif args.compress:
     if args.out:
         fnm = args.out
 
-
     start_time = time.time()
 
     if os.path.isdir(args.inp):
@@ -215,7 +212,13 @@ elif args.decompress:
     if not os.path.exists(out_path):
         os.mkdir(out_path)
        
+    start_time = time.time()
+
     read_arc(0, cur_algo, inpdata, MODE_DECOMPRESS, [out_path])
+ 
+    end_time = time.time() - start_time
+    print "Decompressed in %0.2f s." % (end_time)
+ 
 
 elif args.benchmark:
     if not args.inp:
